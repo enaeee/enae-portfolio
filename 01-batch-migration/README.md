@@ -79,3 +79,9 @@ private void insertRptRegi(
         deptCode, reportNo, yyyymm, rptType, seq, dueDate
     );
 }
+
+**운영 안정성 및 유지보수 개선 효과**
+-수동 실행 및 DB 프로시저 의존 제거로 운영자 실수 감소
+-배치 실패 시 로그 기반으로 즉시 원인 파악 가능
+-재실행 시 데이터 누락/중복 없이 동일한 결과 보장
+-신규 요구사항 추가 시 Service 단위 수정으로 대응 가능
