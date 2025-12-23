@@ -27,6 +27,8 @@
 - 공항/활주로/장애물/교차로 정보를 한 화면에서 조회·편집·내보내기 가능하도록 구성
 - 모달 기반 편집 플로우로 업무 처리 속도 향상
 
+
+## 모든 예시코드는 보안 정책에 따라 실제 엔드포인트/도메인 식별자는 추상화했으며, 구현 패턴 중심으로 재구성했습니다.
 ---
 
 ## ✅ 핵심 구현 1) A/IATA 입력 UX 개선 + 양방향 자동 매핑
@@ -76,59 +78,56 @@ directaChange(){
   }
 },
 ```
-## ✅ 핵심 구현 2) 다중 데이터 영역 한 화면 관리 (Apt/Rwy/Obst/Intersect)
+## ✅ 핵심 구현 2) 다중 데이터 영역 한 화면 관리
 
 ### 목표
 - A 기반으로 공항/활주로 데이터를 한 번에 조회
 - RWY 선택(또는 값 변경) 시 장애물/교차로 데이터를 자동으로 조회하여 사용자 동선을 최소화
 
 ### 구현 내용
-- 검색 시 **AptInfo, RwyInfo를 동시에 조회**
-- RWY 값(`rwydirval`) 변경 시 **ObstInfo, IntersectInfo를 자동 조회**
+- 검색 시 **필요 조건을 동시에 조회**
+- 특정 값 변경 시 연계 값 자동 수정
 - 조회 전 불필요 데이터 초기화로 화면 정합성 유지
 
 ```js
-searchBtn() {
-  if (StringUtils.isEmpty(this.displayParams.a)) {
-    this.$Message.alert('A코드를 선택해주세요.');
+openItemEditor() {
+  this.openEditorModal();
+  this.sendEditorData();
+},
+
+openEditorModal() {
+  this.$bus.$emit(UI_EVENT.OPEN_MODAL); // 모달 오픈
+},
+
+sendEditorData() {
+  const selected = this.gridApi3.getSelectedNodes();
+
+  // 선택이 없으면 "추가 모드"
+  if (selected.length === 0) {
+    const params = lodash.cloneDeep(this.displayParams);
+    params.index = -1;
+
+    // 기본값
+    params.offset = 0;
+    params.subKey = params.selectedSubKey;
+
+    this.$bus.$emit(UI_EVENT.SEND_SELECTED_PARAMS, params);
     return;
   }
 
-  // 조회 전 상태 초기화(정합성 유지)
-  this.displayParams.rwydirval = '';
-  this.displayParams.rwydir = '';
-  this.obstRowData = [];
-  this.intersectRowData = [];
+  // 선택이 있으면 "수정 모드"
+  const rowNode = selected[0];
+  const params = lodash.cloneDeep(rowNode.data);
 
-  const params = lodash.cloneDeep(this.displayParams);
+  // 표시용 값 매핑
+  params.valueA = rowNode.data.metricA;
+  params.valueB = rowNode.data.metricB;
+  params.index = rowNode.rowIndex;
 
-  // AInfo 조회
-  this.$http.get(UrlPath.edit, { params }).then(res => {
-    this.RowData = res.data;
-  });
-
-  // RInfo 조회(리스트/그리드)
-  this.$http.get(UrlPath.edit, { params }).then(res => {
-    this.rList = res.data;
-    this.rRowData = res.data;
-  });
+  this.$bus.$emit(UI_EVENT.SEND_SELECTED_PARAMS, params);
+  this.gridApi3.deselectAll();
 },
 
-searchObst() {
-  const params = lodash.cloneDeep(this.displayParams);
-
-  // OInfo 조회
-  this.$http.get(UrlPath.Oedit, { params }).then(res => {
-    this.oRowData = res.data;
-  });
-
-watch: {
-  'displayParams.rval'(value) {
-    if (value) {
-      this.searchO(); // RWY 선택/변경 시 자동 조회
-    }
-  },
-},
 
 ```
 ---
@@ -143,95 +142,76 @@ watch: {
 ### 1) STX 파일 업로드 (확장자 검증 + FormData 업로드) 및 다운로드
 
 ```js
-FilesearchBtn () {
-  this.initFileInfo();
-  document.getElementById('fileUpload').click();
-},
-
 inputValueChange () {
-  this.fileName = this.$refs.file.value;
+  const file = this.$refs.file.files?.[0];
+  if (!file) return;
 
-  // STX 파일만 허용
-  if (!this.fileName.includes(this.fileType) && !this.fileName.includes(this.fileType.toLowerCase())) {
-    this.$Message.alert('STX 파일이 아닙니다.');
+  this.fileName = file.name;
+
+  // 전용 확장자만 허용
+  const allowedExt = this.allowedExt; // 예: ".dat"
+  if (!this.fileName.toLowerCase().endsWith(allowedExt)) {
+    this.$Message.alert('허용되지 않는 파일 형식입니다.');
     this.initFileInfo();
   }
 },
 
-initFileInfo() {
-  this.$refs.file.value = '';
-  this.fileName = '';
-},
-
 uploadBtn () {
-  if (this.$refs.file.value === '') {
+  const file = this.$refs.file.files?.[0];
+  if (!file) {
     this.$Message.alert('업로드 할 파일을 선택해주세요');
     return;
   }
 
   const formData = new FormData();
-  formData.append('file', this.$refs.file.files[0]);
+  formData.append('file', file);
 
-  this.$http.post(UrlPath.upload, formData, {
+  this.$http.post(API_ENDPOINT.FILE_UPLOAD, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
-  .then(() => {
-    this.$Message.alert('파일 업데이트를 완료하였습니다.');
-  })
-  .catch(err => {
-    this.$Message.alert(err);
+  .then(() => this.$Message.alert('파일 업로드를 완료했습니다.'))
+  .catch(e => {
+    console.error(e);
+    this.$Message.alert('업로드 중 오류가 발생했습니다.');
   });
 },
 
 exportA() {
-  if (StringUtils.isEmpty(this.displayParams.a)) {
-    this.$Message.alert('CODE를 선택해주세요.');
+  if (StringUtils.isEmpty(this.displayParams.key)) {
+    this.$Message.alert('필수 코드를 선택해주세요.');
     return;
   }
 
   const params = lodash.cloneDeep(this.displayParams);
-  let fileName = 'airport.stx';
 
-  // 파일명 규칙 생성(예: CODE_YYYY-MM-DD.stx)
-  this.$http.get(UrlPath.FILENM, { params }).then(res => {
-    fileName =
-      res.data[0].a.substring(0, 4) + '_' +
-      res.data[0].b.substring(0, 3) + '_' +
-      res.data[0].chgdate.substring(0, 10) + '.stx';
-  });
+  // 파일명 규칙은 서버에서 생성(추상화)
+  this.$http.get(API_ENDPOINT.EXPORT_FILENAME, { params }).then(nameRes => {
+    const fileName = nameRes.data || 'export.dat';
 
-  this.downFileCnt++;
-  this.$http({
-    url: UrlPath.EXPORT,
-    method: 'GET',
-    responseType: 'blob',
-    params: Object.assign({}, params, { format: 'stx' }),
-  })
-  .then(res => {
-    this.downFileCnt--;
-
-    if (window.navigator.msSaveBlob) {
-      const blob = new Blob([res.data]);
-      window.navigator.msSaveBlob(blob, fileName);
-    } else {
+    this.$http({
+      url: API_ENDPOINT.EXPORT_FILE,
+      method: 'GET',
+      responseType: 'blob',
+      params: Object.assign({}, params, { format: 'binary' }),
+    })
+    .then(res => {
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
-    }
-
-    if (this.downFileCnt === 0) {
       this.$Message.alert('파일이 생성되었습니다.');
-    }
-  })
-  .catch(error => {
-    this.downFileCnt = 0;
-    this.$Message.alert(error.message);
+    })
+    .catch(e => {
+      console.error(e);
+      this.$Message.alert('파일 생성 중 오류가 발생했습니다.');
+    });
   });
 },
+
 ```
+
 -업로드/다운로드 기능을 화면에서 제공하여 운영자의 수작업(서버 접근/별도 처리)을 줄임
 -다양한 Export 요구사항(전체/기종별/단건)을 UI에서 즉시 처리 가능
 
@@ -250,67 +230,65 @@ exportA() {
 
 ### 1) 모달 오픈 → 선택 데이터 전달(수정/추가 분기)
 
-#### 장애물(Obst) 입력 예시
+#### 입력 예시
 ```js
-inputObs() {
-  this.asyncObs();
-},
-async asyncObs() {
-  await this.inputObsOn();
-  this.sendObsData();
-},
-inputObsOn() {
-  this.$bus.$emit(bus.path.InputObsInfoModal); // 모달 오픈
+openItemEditor() {
+  this.openEditorModal();
+  this.sendEditorData();
 },
 
-sendObsData() {
-  // 선택이 없으면 "추가 모드"로 기본값 세팅
-  if (this.gridApi3.getSelectedNodes().length === 0) {
+openEditorModal() {
+  this.$bus.$emit(UI_EVENT.OPEN_MODAL); // 모달 오픈(추상화)
+},
+
+sendEditorData() {
+  const selected = this.gridApi3.getSelectedNodes();
+
+  // 선택이 없으면 "추가 모드"
+  if (selected.length === 0) {
     const params = lodash.cloneDeep(this.displayParams);
     params.index = -1;
-    params.obslatoff = 0;
-    params.rwydir = params.rwydirval;
-    this.$bus.$emit(bus.path.INPUT_OBS_SELECT_PARAMS, params);
+
+    // 기본값 세팅(추상화)
+    params.offset = 0;
+    params.subKey = params.selectedSubKey;
+
+    this.$bus.$emit(UI_EVENT.SEND_SELECTED_PARAMS, params);
     return;
   }
 
-  // 선택이 있으면 "수정 모드"로 데이터 전달
-  this.gridApi3.forEachNode(rowNode => {
-    if (rowNode.selected === true) {
-      const params = lodash.cloneDeep(rowNode.data);
-      params.heightval = rowNode.data.obsheight;
-      params.distanceval = rowNode.data.obsdist;
-      params.index = rowNode.rowIndex;
+  // 선택이 있으면 "수정 모드"
+  const rowNode = selected[0];
+  const params = lodash.cloneDeep(rowNode.data);
 
-      this.$bus.$emit(bus.path.INPUT_OBS_SELECT_PARAMS, params);
-      this.gridApi3.deselectAll();
-    }
-  });
+  params.valueA = rowNode.data.metricA;
+  params.valueB = rowNode.data.metricB;
+  params.index = rowNode.rowIndex;
+
+  this.$bus.$emit(UI_EVENT.SEND_SELECTED_PARAMS, params);
+  this.gridApi3.deselectAll();
 },
 ```
 
 ### 모달 저장 이벤트 수신 → 서버 저장 → 재조회
 ```js
 mounted() {
-  // Obst 저장 결과 수신
-  this.$bus.$on(bus.path.INPUT_OBS_PARAMS, newParams => {
-    if (newParams.index !== -1) {
-      // 수정
-      this.$http.post(UrlPath.TODC.OBSTINFO_UP, newParams).then(() => {
-        this.searchObst();
+  // 저장 결과 수신
+  this.$bus.$on(UI_EVENT.SAVE_EVENT, (newParams) => {
+    const isUpdate = newParams.index !== -1;
+    const endpoint = isUpdate ? API_ENDPOINT.UPDATE_ITEM : API_ENDPOINT.CREATE_ITEM;
+
+    this.$http.post(endpoint, newParams)
+      .then(() => this.refreshDetailList())
+      .catch((e) => {
+        console.error(e);
+        this.$Message.alert('저장 중 오류가 발생했습니다.');
       });
-    } else {
-      // 추가
-      this.$http.post(UrlPath.TODC.OBSTINFO_INTO, newParams).then(() => {
-        this.searchObst();
-      });
-    }
   });
 },
 
 beforeDestroy() {
-  // 화면 종료 시 이벤트 해제(메모리 누수 방지 목적)
-  this.$bus.$off(bus.path.INPUT_OBS_PARAMS);
+  this.$bus.$off(UI_EVENT.SAVE_EVENT);
 },
 ```
 -그리드 선택 → 모달 편집 → 저장 → 재조회까지 한 흐름으로 구성되어 사용자 작업 속도 향상
