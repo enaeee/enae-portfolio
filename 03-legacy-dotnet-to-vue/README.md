@@ -7,8 +7,8 @@
 기존 .NET 기반으로 운영되던 운항기술지원 시스템 화면들을 Vue 기반으로 재구성하여  
 기능은 동일하게 유지하면서도 사용자가 더 빠르고 직관적으로 업무를 처리할 수 있도록 UI/UX를 개선했습니다.
 
-그 중 비행기 관련 정보 관리,  
-파일 업로드/다운로드, 외부 파일 연계까지 한 화면에서 처리하는 기능이 집중되어 있어 대표 사례로 정리합니다.
+그 중 관련 정보 관리, 파일 업로드/다운로드, 외부 파일 연계까지 한 화면에서 처리하는 기능과
+파일 업로드/다운로드, 외부 파일 연계까지 한 화면에서 처리 하였습니다.
 
 ---
 
@@ -24,14 +24,14 @@
 ### ✔ 개선 방향
 - SPA 구조로 전환하여 화면 리로드 최소화
 - 입력 실수 방지를 위한 UX 설계(직접 입력/선택 전환, 영문 검증, 대문자 통일)
-- 공항/활주로/장애물/교차로 정보를 한 화면에서 조회·편집·내보내기 가능하도록 구성
+- 필요 정보를 한 화면에서 조회·편집·내보내기 가능하도록 구성
 - 모달 기반 편집 플로우로 업무 처리 속도 향상
 
 
 ## 모든 예시코드는 보안 정책에 따라 실제 엔드포인트/도메인 식별자는 추상화했으며, 구현 패턴 중심으로 재구성했습니다.
 ---
 
-## ✅ 핵심 구현 1) A/IATA 입력 UX 개선 + 양방향 자동 매핑
+## ✅ 핵심 구현 1) A/B 입력 UX 개선 + 양방향 자동 매핑
 
 ### 목적
 - 사용자가 a 또는 b 중 하나만 입력해도 나머지가 자동으로 동기화되도록 구현
@@ -48,7 +48,7 @@ directChange(){
 directaChange(){
   if(this.displayParams.b === 'direct'){
     this.displayParams.b = '';
-    this.directIata = true;
+    this.directB = true;
   }
 },
 'displayParams.a'(value, oldVal) {
@@ -134,12 +134,12 @@ sendEditorData() {
 
 ## ✅ 핵심 구현 3) 파일 업로드 + 다양한 Export
 ### 목표
-- STX 파일 업로드를 화면에서 즉시 처리하여 운영 편의성 향상
+- 특정 파일 업로드를 화면에서 즉시 처리하여 운영 편의성 향상
 - A 단건 / 전체 / 기종별 등 다양한 Export 요구사항을 UI에서 바로 제공
 
 ---
 
-### 1) STX 파일 업로드 (확장자 검증 + FormData 업로드) 및 다운로드
+### 1) 특정 파일 업로드 (확장자 검증 + FormData 업로드) 및 다운로드
 
 ```js
 inputValueChange () {
@@ -184,7 +184,7 @@ exportA() {
 
   const params = lodash.cloneDeep(this.displayParams);
 
-  // 파일명 규칙은 서버에서 생성(추상화)
+  // 파일명 규칙은 서버에서 생성
   this.$http.get(API_ENDPOINT.EXPORT_FILENAME, { params }).then(nameRes => {
     const fileName = nameRes.data || 'export.dat';
 
@@ -249,7 +249,7 @@ sendEditorData() {
     const params = lodash.cloneDeep(this.displayParams);
     params.index = -1;
 
-    // 기본값 세팅(추상화)
+    // 기본값 세팅
     params.offset = 0;
     params.subKey = params.selectedSubKey;
 
