@@ -41,15 +41,15 @@ PostgreSQL 환경으로 전환하면서
 ### Before (Oracle)
 ```sql
 SELECT *
-FROM FLIGHT_LOG
+FROM LOG
 WHERE TO_CHAR(FLIGHT_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE - 7, 'YYYYMMDD');
 ```
 
 ### After (PostgreSql)
 ```sql
 SELECT *
-FROM flight_log
-WHERE flight_date >= CURRENT_DATE - INTERVAL '7 days';
+FROM log
+WHERE date >= CURRENT_DATE - INTERVAL '7 days';
 ```
 
 -문자열 변환 제거 → 성능 및 가독성 향상
