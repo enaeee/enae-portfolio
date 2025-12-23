@@ -7,8 +7,8 @@
 기존 .NET 기반으로 운영되던 운항기술지원 시스템 화면들을 Vue 기반으로 재구성하여  
 기능은 동일하게 유지하면서도 사용자가 더 빠르고 직관적으로 업무를 처리할 수 있도록 UI/UX를 개선했습니다.
 
-그 중 **Airport 화면**은 공항(Apt)·활주로(Rwy)·장애물(Obst)·교차로(Intersect) 정보 관리,  
-파일 업로드/다운로드, 외부 NOTAM 연계까지 한 화면에서 처리하는 기능이 집중되어 있어 대표 사례로 정리합니다.
+그 중 비행기 관련 정보 관리,  
+파일 업로드/다운로드, 외부 파일 연계까지 한 화면에서 처리하는 기능이 집중되어 있어 대표 사례로 정리합니다.
 
 ---
 
@@ -29,7 +29,7 @@
 
 ---
 
-## ✅ 핵심 구현 1) ICAO/IATA 입력 UX 개선 + 양방향 자동 매핑
+## ✅ 핵심 구현 1) A/IATA 입력 UX 개선 + 양방향 자동 매핑
 
 ### 목적
 - 사용자가 a 또는 b 중 하나만 입력해도 나머지가 자동으로 동기화되도록 구현
@@ -40,7 +40,7 @@
 directChange(){
   if(this.displayParams.a === 'direct'){
     this.displayParams.a = '';
-    this.directIcao = true;
+    this.directA = true;
   }
 },
 directaChange(){
@@ -79,7 +79,7 @@ directaChange(){
 ## ✅ 핵심 구현 2) 다중 데이터 영역 한 화면 관리 (Apt/Rwy/Obst/Intersect)
 
 ### 목표
-- ICAO 기반으로 공항/활주로 데이터를 한 번에 조회
+- A 기반으로 공항/활주로 데이터를 한 번에 조회
 - RWY 선택(또는 값 변경) 시 장애물/교차로 데이터를 자동으로 조회하여 사용자 동선을 최소화
 
 ### 구현 내용
@@ -90,7 +90,7 @@ directaChange(){
 ```js
 searchBtn() {
   if (StringUtils.isEmpty(this.displayParams.a)) {
-    this.$Message.alert('ICAO코드를 선택해주세요.');
+    this.$Message.alert('A코드를 선택해주세요.');
     return;
   }
 
@@ -136,7 +136,7 @@ watch: {
 ## ✅ 핵심 구현 3) 파일 업로드 + 다양한 Export
 ### 목표
 - STX 파일 업로드를 화면에서 즉시 처리하여 운영 편의성 향상
-- ICAO 단건 / 전체 / 기종별(Airbus, A220) 등 다양한 Export 요구사항을 UI에서 바로 제공
+- A 단건 / 전체 / 기종별 등 다양한 Export 요구사항을 UI에서 바로 제공
 
 ---
 
@@ -183,7 +183,7 @@ uploadBtn () {
   });
 },
 
-exporticao() {
+exportA() {
   if (StringUtils.isEmpty(this.displayParams.a)) {
     this.$Message.alert('CODE를 선택해주세요.');
     return;
