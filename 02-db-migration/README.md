@@ -38,16 +38,19 @@ PostgreSQL 환경으로 전환하면서
 
 ## 🔧 핵심 구현 1) 날짜/시간 처리 방식 개선
 
-### 
-/```sql
+### Before (Oracle)
+```sql
 SELECT *
 FROM FLIGHT_LOG
 WHERE TO_CHAR(FLIGHT_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE - 7, 'YYYYMMDD');
+```
 
 ### After (PostgreSql)
+```sql
 SELECT *
 FROM flight_log
 WHERE flight_date >= CURRENT_DATE - INTERVAL '7 days';
+```
 
 -문자열 변환 제거 → 성능 및 가독성 향상
 -DB 변경 시 영향 최소화
