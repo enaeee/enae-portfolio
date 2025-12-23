@@ -34,17 +34,17 @@ ShedLock을 적용하여 중복 실행을 방지했습니다.
 ## 🔧 핵심 구현 1) 스케줄 트리거 + 중복 실행 방지
 
 ```java
-@Scheduled(cron = "0 0 7 1 * *", zone = "Asia/Seoul") // 매월 1일 07:00
+@Scheduled(cron = "0 0 0 1 * *", zone = "Asia/Seoul") 
 @SchedulerLock(
-    name = "Report_Task",
-    lockAtLeastFor = "PT30M",
-    lockAtMostFor = "PT60M"
+    name = "Report",
+    lockAtLeastFor = "PT1M",
+    lockAtMostFor = "PT30M"
 )
-public void generateMonthlyReport() {
-    String currentMonth = getCurrentMonth(); // yyyyMM
-    log.info("Starting report generation for month: {}", currentMonth);
-    reportService.processReport(currentMonth);
-    log.info("Report generation completed for month: {}", currentMonth);
+public void runMonthlyReport() {
+  String targetMonth = resolveTargetMonth(); // yyyyMM
+  log.info("Monthly report started. targetMonth={}", targetMonth);
+  reportService.generate(targetMonth);
+  log.info("Monthly report finished. targetMonth={}", targetMonth);
 }
 
 -다중 서버 환경에서도 ShedLock으로 중복 실행 방지
@@ -52,31 +52,31 @@ public void generateMonthlyReport() {
 -시작/완료 로그로 장애 시점 및 대상 월 추적 가능
 
 @Transactional
-public void processReport(String yyyymm) {
-    validateInput(yyyymm);          // 입력값/날짜 검증
-    deleteData(yyyymm);             // 기존 월 데이터 정리
-    processDeptData(yyyymm);        // 부서 기준 생성
-    processIataPortData(yyyymm);    // IATA 기준 생성
+public void generate(String targetMonth) {
+    validate(targetMonth);          // 입력값/날짜 검증
+    cleanup(targetMonth);             // 기존 데이터 정리
+    generateByGroup(targetMonth);        //  기준 생성
+    generateByType(targetMonth);    // 타입 기준 생성
 }
 
 -재실행 시에도 동일한 결과를 보장하는
-삭제 후 재생성(Idempotent) 패턴 적용
+삭제 후 재생성 패턴 적용
 -월 단위 작업을 하나의 트랜잭션으로 처리하여
 부분 실패 및 데이터 불일치 방지
 -처리 기준을 명확히 분리해 유지보수성 향상
 
-private void insertRptRegi(
-        String deptCode,
-        String reportNo,
+private void insertRpt(
+        String code,
+        String no,
         String yyyymm,
         String dueDate,
-        String rptType,
+        String type,
         int seq
 ) {
     jdbcTemplate.update(
         "INSERT INTO xxx.xxxxx (a, b, yyyymm, c, d, date1, date2, sts, f) " +
-        "VALUES (?, ?, to_date(?, 'YYYYMM'), ?, ?, to_date(?, 'yyyymmdd'), NOW(), 'RPTINI','')",
-        deptCode, reportNo, yyyymm, rptType, seq, dueDate
+        "VALUES (?, ?, to_date(?, 'YYYYMM'), ?, ?, to_date(?, 'yyyymmdd'), NOW(), 'STATUS','')",
+        code, no, yyyymm, dueDate, type, seq
     );
 }
 
