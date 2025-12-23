@@ -19,34 +19,18 @@ Full Stack Developer Portfolio_enae
 > 기존 .NET 시스템을 Spring 기반으로 전환  
 > DB 마이그레이션 + Docker 기반 배포 자동화
 
-👉 상세 코드: (추후 업로드)
-
 ---
 
 ### 🔐 ASIMS 항공보안 시스템 재개발
 Java EE 기반을 Spring Boot & Batch 기반 구조로 전환  
 반복 업무 자동화(스케줄러) + 운영 안정성 강화
 
-👉 상세 코드: (추후 업로드)
-
 ---
 
 ## 🔧 기술 스택
 
 | Frontend | Backend | Database | DevOps | Batch |
-|---|---|---|---|---|
 | React.js, TS, Vue.js | Java 11/8, Spring Boot, MyBatis | PostgreSQL, Oracle | Docker, AWS ECR | Spring Batch, Scheduler |
-
----
-
-## 🧩 트러블슈팅 기반 코드 개선 사례
-
-| 개선 영역 | 링크 |
-|---|---|
-| Batch 전환 | (추후 업로드) |
-| 성능 튜닝 SQL | (추후 업로드) |
-| Sybase JDBC 적용 | (추후 업로드) |
-| ag-grid 렌더링 개선 | (추후 업로드) |
 
 ---
 
