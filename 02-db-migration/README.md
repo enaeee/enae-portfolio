@@ -38,8 +38,8 @@ PostgreSQL 환경으로 전환하면서
 
 ## 🔧 핵심 구현 1) 날짜/시간 처리 방식 개선
 
-### Before (Oracle)
-```sql
+### 
+/```sql
 SELECT *
 FROM FLIGHT_LOG
 WHERE TO_CHAR(FLIGHT_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE - 7, 'YYYYMMDD');
