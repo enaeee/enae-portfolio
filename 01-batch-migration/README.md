@@ -52,9 +52,9 @@ public void processReport(String yyyymm) {
     processIataPortData(yyyymm);    // IATA 기준 생성
 }
 
-// 재실행 시에도 안전하게 동작하도록 삭제 후 재생성 패턴 사용
-// @Transactional로 월별 작업을 원자적으로 처리
-// 기준을 명확히 세워 유지보수 용이
+- 재실행 시에도 안전하게 동작하도록 삭제 후 재생성 패턴 사용
+- @Transactional로 월별 작업을 원자적으로 처리
+- 기준을 명확히 세워 유지보수 용이
 
 //db작업 예
 private void insertRptRegi(String deptCode, String reportNo, String yyyymm, String dueDate, String rptType, int seq) {
